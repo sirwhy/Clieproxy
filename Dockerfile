@@ -6,8 +6,11 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
-# Clone dashboard source — semua file ada di sini termasuk package-lock.json
-RUN git clone https://github.com/sirwhy/cliproxyapi-dashboard.git .
+# Clone full repo lalu masuk subfolder dashboard/
+RUN git clone https://github.com/sirwhy/cliproxyapi-dashboards.git /repo
+
+# Pindah semua isi dashboard/ ke /app
+RUN cp -r /repo/dashboard/. /app/ && rm -rf /repo
 
 RUN NODE_OPTIONS=--max-old-space-size=384 npm ci --legacy-peer-deps --no-audit --no-fund && \
     npm cache clean --force
@@ -18,7 +21,6 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copy semua dari deps stage (sudah termasuk source + node_modules)
 COPY --from=deps /app ./
 
 # Build-time placeholders — Railway runtime Variables override these
@@ -27,7 +29,6 @@ ARG JWT_SECRET="build-time-placeholder-at-least-32-chars"
 ARG MANAGEMENT_API_KEY="build-time-placeholder-16ch"
 ARG CLIPROXYAPI_MANAGEMENT_URL="http://127.0.0.1:8317/v0/management"
 
-# Promote ARGs to ENV so zod validation passes during Next.js build
 ENV DATABASE_URL=${DATABASE_URL}
 ENV JWT_SECRET=${JWT_SECRET}
 ENV MANAGEMENT_API_KEY=${MANAGEMENT_API_KEY}
@@ -45,12 +46,10 @@ RUN addgroup -g 1001 -S nodejs && \
 
 RUN apk add --no-cache tini
 
-ARG DASHBOARD_VERSION=railway
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DASHBOARD_VERSION=${DASHBOARD_VERSION}
 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/messages ./messages
