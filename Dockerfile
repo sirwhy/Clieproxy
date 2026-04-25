@@ -26,12 +26,10 @@ COPY --from=deps /app ./
 ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
 ARG JWT_SECRET="build-time-placeholder-at-least-32-chars"
 ARG MANAGEMENT_API_KEY="build-time-placeholder-16ch"
-ARG CLIPROXYAPI_MANAGEMENT_URL="http://127.0.0.1:8317/v0/management"
 
 ENV DATABASE_URL=${DATABASE_URL}
 ENV JWT_SECRET=${JWT_SECRET}
 ENV MANAGEMENT_API_KEY=${MANAGEMENT_API_KEY}
-ENV CLIPROXYAPI_MANAGEMENT_URL=${CLIPROXYAPI_MANAGEMENT_URL}
 
 RUN npx prisma generate
 
