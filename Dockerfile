@@ -1,15 +1,14 @@
 # syntax=docker/dockerfile:1.4
 
-# ── Stage 1: deps ──────────────────────────────────────────────────────────
+# ── Stage 1: clone + install deps ──────────────────────────────────────────
 FROM node:20-alpine AS deps
 WORKDIR /app
 
 RUN apk add --no-cache git
 
-# Clone dashboard source from sirwhy repo
+# Clone dashboard source — semua file ada di sini termasuk package-lock.json
 RUN git clone https://github.com/sirwhy/cliproxyapi-dashboard.git .
 
-COPY package-lock.json* ./
 RUN NODE_OPTIONS=--max-old-space-size=384 npm ci --legacy-peer-deps --no-audit --no-fund && \
     npm cache clean --force
 
@@ -19,13 +18,8 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package.json /app/package-lock.json* ./
-COPY --from=deps /app/next.config.ts /app/tsconfig.json /app/prisma.config.ts /app/postcss.config.mjs ./
-COPY --from=deps /app/public ./public
-COPY --from=deps /app/src ./src
-COPY --from=deps /app/messages ./messages
-COPY --from=deps /app/prisma ./prisma
+# Copy semua dari deps stage (sudah termasuk source + node_modules)
+COPY --from=deps /app ./
 
 # Build-time placeholders — Railway runtime Variables override these
 ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
