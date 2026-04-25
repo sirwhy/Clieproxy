@@ -1,22 +1,21 @@
 # syntax=docker/dockerfile:1.4
 
 # ── Stage 1: clone + install deps ──────────────────────────────────────────
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 
 RUN apk add --no-cache git
 
 # Clone full repo lalu masuk subfolder dashboard/
-RUN git clone https://github.com/sirwhy/cliproxyapi-dashboards.git /repo
+RUN git clone https://github.com/sirwhy/cliproxyapi-dashboards.git /repo && \
+    cp -r /repo/dashboard/. /app/ && \
+    rm -rf /repo
 
-# Pindah semua isi dashboard/ ke /app
-RUN cp -r /repo/dashboard/. /app/ && rm -rf /repo
-
-RUN NODE_OPTIONS=--max-old-space-size=384 npm ci --legacy-peer-deps --no-audit --no-fund && \
+RUN NODE_OPTIONS=--max-old-space-size=512 npm ci --legacy-peer-deps --no-audit --no-fund && \
     npm cache clean --force
 
 # ── Stage 2: builder ────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -35,10 +34,12 @@ ENV MANAGEMENT_API_KEY=${MANAGEMENT_API_KEY}
 ENV CLIPROXYAPI_MANAGEMENT_URL=${CLIPROXYAPI_MANAGEMENT_URL}
 
 RUN npx prisma generate
-RUN NODE_OPTIONS=--max-old-space-size=512 npm run build
+
+# Naikkan memory limit untuk Next.js build
+RUN NODE_OPTIONS=--max-old-space-size=2048 npm run build
 
 # ── Stage 3: runner ─────────────────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 RUN addgroup -g 1001 -S nodejs && \
