@@ -63,6 +63,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/adapter-pg .
 COPY --from=builder --chown=nextjs:nodejs /app/entrypoint.sh ./entrypoint.sh
 
 RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
+# Patch entrypoint to limit Node.js heap at runtime (Railway Hobby = 512MB RAM)
+RUN sed -i 's|exec node server.js|exec node --max-old-space-size=400 server.js|g' entrypoint.sh
 RUN mkdir -p /app/logs /app/backups && chown nextjs:nodejs /app/logs /app/backups
 
 USER nextjs
